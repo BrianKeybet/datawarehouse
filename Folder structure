@@ -1,0 +1,29 @@
+/my-docker-stack/
+├── docker-compose.yml
+├── .env
+├── config/
+│   ├── zookeeper/
+│   │   └── zoo.cfg
+│   ├── kafka/
+│   │   └── server.properties
+│   ├── hadoop/
+│   │   ├── core-site.xml
+│   │   └── hdfs-site.xml
+│   ├── hive/
+│   │   └── hive-site.xml
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   ├── grafana/
+│   │   └── custom.ini
+│   ├── airflow/
+│   │   └── airflow.cfg
+├── data/                      # Persistent volumes for container data
+│   ├── zookeeper-data/
+│   ├── kafka-data/
+│   ├── hdfs-data/
+│   ├── postgres-data/
+│   └── prometheus-data/
+├── logs/
+│   ├── airflow/
+│   ├── kafka/
+│   └── spark/

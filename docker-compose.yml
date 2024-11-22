@@ -1,0 +1,114 @@
+services:
+  zookeeper: # Manages Kafka brokers
+    image: confluentinc/cp-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 2181:2181
+    volumes:
+      - ./data/zookeeper-data:/var/lib/zookeeper
+
+  kafka: # For real-time data ingestion
+    image: confluentinc/cp-kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_BROKER_ID: 1
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+    volumes:
+      - ./data/kafka-data:/var/lib/kafka/data
+      - ./config/kafka/server.properties:/etc/kafka/server.properties
+
+  postgres: # Metadata database for Airflow and Hive
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+
+  airflow: # For orchestrating ETL workflows
+    image: apache/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    volumes:
+      - ./config/airflow/airflow.cfg:/opt/airflow/airflow.cfg
+      - ./dags:/opt/airflow/dags
+      - ./logs/airflow:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+
+  namenode: # For distributed storage (HDFS)
+    image: bde2020/hadoop-namenode
+    environment:
+      CLUSTER_NAME: hadoop_cluster
+    ports:
+      - 9870:9870
+    volumes:
+      - ./data/hdfs-data/namenode:/hadoop/dfs/name
+      - ./config/hadoop/core-site.xml:/etc/hadoop/core-site.xml
+      - ./config/hadoop/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+
+  datanode: # For resource management (YARN)
+    image: bde2020/hadoop-datanode
+    environment:
+      CLUSTER_NAME: hadoop_cluster
+    ports:
+      - 9864:9864
+    volumes:
+      - ./data/hdfs-data/datanode:/hadoop/dfs/data
+      - ./config/hadoop/core-site.xml:/etc/hadoop/core-site.xml
+      - ./config/hadoop/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+    depends_on:
+      - namenode
+
+  hive-metastore: # Metadata service for Hive
+    image: bde2020/hive-metastore-postgresql
+    environment:
+      HIVE_METASTORE_DB_TYPE: postgres
+      HIVE_METASTORE_DB_URI: jdbc:postgresql://postgres:5435/airflow
+      HIVE_METASTORE_DB_DRIVER: org.postgresql.Driver
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+    depends_on:
+      - namenode
+      - postgres
+    volumes:
+      - ./config/hive/hive-site.xml:/opt/hive/conf/hive-site.xml
+
+  hive-server: # For SQL-based querying and analytics
+    image: bde2020/hive
+    ports:
+      - 10000:10000
+    depends_on:
+      - hive-metastore
+
+  prometheus: # For monitoring metrics
+    image: prom/prometheus
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus-data:/prometheus
+    ports:
+      - 9090:9090
+
+  grafana: # For dashboard visualization
+    image: grafana/grafana
+    volumes:
+      - ./config/grafana:/etc/grafana
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus
+
+
