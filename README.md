@@ -42,7 +42,7 @@ This project implements a fully containerized, scalable data pipeline using **Do
 
 ## **Folder Structure**
 ```
-/my-docker-stack/
+/datawarehouseproject/
 ├── docker-compose.yml       # Docker Compose configuration for the entire stack
 ├── .env                     # Environment variables
 ├── config/                  # Configuration files for each component
