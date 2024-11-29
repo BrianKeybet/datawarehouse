@@ -1,0 +1,9 @@
+FROM apache/airflow:2.3.0
+USER root
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev && \
+    apt-get clean
+USER airflow
+RUN pip install pandas pyhive sqlalchemy
+COPY ./plugins /opt/airflow/plugins
